@@ -1,0 +1,106 @@
+service: url-shortener
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-central-1
+  stage: ${opt:stage}
+  profile: ${env:AWS_PROFILE}
+  environment:
+    DAX_ENDPOINT: !GetAtt UrlsDaxCluster.ClusterDiscoveryEndpoint
+    URLS_TABLE: !Ref UrlsTable
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource: !GetAtt UrlsTable.Arn
+    - Effect: Allow
+      Action:
+        - dax:DefineAttributeList
+        - dax:DefineAttributeListId
+        - dax:DefineKeySchema
+        - dax:Endpoints
+        - dax:GetItem
+        - dax:PutItem
+      Resource: !GetAtt UrlsDaxCluster.Arn
+  vpc:
+    subnetIds:
+      - ${env:SUBNET_1}
+      - ${env:SUBNET_2}
+      - ${env:SUBNET_3}
+    securityGroupIds:
+      - ${env:SECURITY_GROUP}
+
+functions:
+  getFullUrl:
+    handler: handler.getFullUrl
+    events:
+      - http:
+          method: GET
+          path: getFullUrl/{hashCode}
+  createShortUrl:
+    handler: handler.createShortUrl
+    events:
+      - http:
+          method: POST
+          path: createShortUrl
+
+resources:
+  Resources:
+    UrlsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${opt:stage}-Urls
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    UrlsDaxCluster:
+      Type: AWS::DAX::Cluster
+      Properties:
+        ClusterName: ${opt:stage}-UrlsDaxCluster
+        IAMRoleARN: !GetAtt DaxToDynamoRole.Arn
+        NodeType: dax.t2.small
+        ReplicationFactor: 1
+    DaxToDynamoRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - dax.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Policies:
+          - PolicyName: UrlsTableAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:BatchGetItem
+                    - dynamodb:GetItem
+                    - dynamodb:Query
+                    - dynamodb:Scan
+                    - dynamodb:BatchWriteItem
+                    - dynamodb:DeleteItem
+                    - dynamodb:PutItem
+                    - dynamodb:UpdateItem
+                    - dynamodb:DescribeLimits
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:DescribeTable
+                    - dynamodb:ListTables
+                  Resource: !GetAtt UrlsTable.Arn
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-dotenv-plugin

@@ -1,0 +1,16 @@
+{
+  "name": "url-shortener",
+  "version": "1.0.0",
+  "keywords": [],
+  "license": "ISC",
+  "devDependencies": {
+    "@types/shortid": "0.0.29",
+    "serverless-dotenv-plugin": "2.1.1",
+    "serverless-plugin-typescript": "1.1.9",
+    "typescript": "3.7.5"
+  },
+  "dependencies": {
+    "amazon-dax-client": "1.2.2",
+    "shortid": "2.2.15"
+  }
+}
