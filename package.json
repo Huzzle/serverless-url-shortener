@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "2.606.0"
+    "aws-sdk": "2.814.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "8.10.39",
